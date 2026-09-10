@@ -37,7 +37,7 @@ That repo holds an intentionally vulnerable WooCommerce-style plugin (**lab only
 
 ## What it detects
 
-Full [**OWASP Top 10:2025**](https://owasp.org/Top10/2025/) coverage:
+[**OWASP Top 10:2025**](https://owasp.org/Top10/2025/) mapping:
 
 | Category | Technique |
 |---|---|
