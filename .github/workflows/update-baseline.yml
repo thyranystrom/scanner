@@ -1,0 +1,63 @@
+# ============================================================================
+# Manually update the baseline (via the GitHub UI)
+# ============================================================================
+# Run this when you DELIBERATELY accept existing findings as false positives
+# or "known issues" -- they will then be filtered out of future scans.
+#
+# How to run:
+#   GitHub -> Actions -> "Update Security Baseline" -> Run workflow
+# ============================================================================
+
+name: Update Security Baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      min_confidence:
+        description: "Minimum confidence to include in the baseline (0.0-1.0)"
+        required: false
+        default: "0.40"
+
+jobs:
+  baseline:
+    name: Write new baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit the baseline file
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+          coverage: none
+
+      - name: Install PHP deps
+        working-directory: scanner/php
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Write baseline
+        run: |
+          python -m scanner.main . \
+            --write-baseline .security-baseline.json \
+            --min-confidence ${{ github.event.inputs.min_confidence }}
+
+      - name: Commit baseline
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .security-baseline.json
+          git diff --staged --quiet && echo "No changes" && exit 0
+          git commit -m "chore: update security baseline [skip ci]"
+          git push
